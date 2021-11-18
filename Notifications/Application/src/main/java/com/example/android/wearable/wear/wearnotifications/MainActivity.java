@@ -69,13 +69,15 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     private static final String BIG_PICTURE_STYLE = "BIG_PICTURE_STYLE";
     private static final String INBOX_STYLE = "INBOX_STYLE";
     private static final String MESSAGING_STYLE = "MESSAGING_STYLE";
+    private static final String BADGE_NUMBER_STYLE = "BADGE_NUMBER_STYLE";
 
     // Collection of notification styles to back ArrayAdapter for Spinner.
     private static final String[] NOTIFICATION_STYLES = {
-            BIG_TEXT_STYLE, BIG_PICTURE_STYLE, INBOX_STYLE, MESSAGING_STYLE
+            BADGE_NUMBER_STYLE, BIG_TEXT_STYLE, BIG_PICTURE_STYLE, INBOX_STYLE, MESSAGING_STYLE
     };
 
     private static final String[] NOTIFICATION_STYLES_DESCRIPTION = {
+            "Customizes the badge number",
             "Demos reminder type app using BIG_TEXT_STYLE",
             "Demos social type app using BIG_PICTURE_STYLE + inline notification response",
             "Demos email type app using INBOX_STYLE",
@@ -174,9 +176,68 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 generateMessagingStyleNotification();
                 break;
 
+            case BADGE_NUMBER_STYLE:
+                generateBadgeNumberNotification();
+                break;
+
             default:
                 // continue below
         }
+    }
+
+    /*
+     * Generates a BADGE_NUMBER notification
+     */
+    private void generateBadgeNumberNotification() {
+
+        Log.d(TAG, "generateBadgeNumberNotification()");
+
+        // 0. Get your data (everything unique per Notification).
+        MockDatabase.InboxStyleEmailAppData inboxStyleEmailAppData =
+                MockDatabase.getInboxStyleData();
+
+        // 1. Create/Retrieve Notification Channel for O and beyond devices (26+).
+        String notificationChannelId =
+                NotificationUtil.createNotificationChannel(this, inboxStyleEmailAppData);
+
+
+        // 3. Set up main Intent for notification.
+        Intent notifyIntent = new Intent(this, BigTextMainActivity.class);
+
+        // Sets the Activity to start in a new, empty task
+        notifyIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+
+        PendingIntent notifyPendingIntent =
+                PendingIntent.getActivity(
+                        this,
+                        0,
+                        notifyIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT
+                );
+
+        // 5. Build and issue the notification.
+
+        // Because we want this to be a new notification (not updating a previous notification), we
+        // create a new Builder. Later, we use the same global builder to get back the notification
+        // we built here for the snooze action, that is, canceling the notification and relaunching
+        // it several seconds later.
+
+        // Notification Channel Id is ignored for Android pre O (26).
+        NotificationCompat.Builder notificationCompatBuilder =
+                new NotificationCompat.Builder(
+                        getApplicationContext(), notificationChannelId);
+
+        GlobalNotificationBuilder.setNotificationCompatBuilderInstance(notificationCompatBuilder);
+
+        Notification notification = notificationCompatBuilder
+                .setSmallIcon(R.drawable.ic_launcher)
+                .setContentIntent(notifyPendingIntent)
+                .setNumber(inboxStyleEmailAppData.getNumberOfNewEmails())
+                .setContentTitle(inboxStyleEmailAppData.getContentTitle()) // Without this line, badge dot/number does not display.
+                .setSubText(Integer.toString(inboxStyleEmailAppData.getNumberOfNewEmails()))
+                .build();
+
+        mNotificationManagerCompat.notify(123, notification);
     }
 
     /*
